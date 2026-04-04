@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "WatchMatch",
+  "name": "TubeMatch",
   "version": "1.0.0",
   "description": "Find matches for the video you are watching",
   "action": {
     "default_popup": "popup.html"
   },
   "permissions": ["storage", "tabs"],
+  "host_permissions": ["https://*.supabase.co/*"],
   "background": {
     "service_worker": "background.js"
   },
