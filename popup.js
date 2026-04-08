@@ -1,7 +1,11 @@
-let settingsPage = document.getElementById('settings-page');
-let matchesPage = document.getElementById('matches-page');
-let settingsIconBtn = document.getElementById('settings-icon-btn');
-let matchesIconBtn = document.getElementById('matches-icon-btn');
+const settingsPage = document.getElementById('settings-page');
+const matchesPage = document.getElementById('matches-page');
+const currentVideoPage = document.getElementById('current-video-page');
+const currentVideoIconBtn = document.getElementById('current-video-icon-btn');
+const matchesIconBtn = document.getElementById('matches-icon-btn');
+const settingsIconBtn = document.getElementById('settings-icon-btn');
+
+const findMatchesBtn = document.getElementById('find-matches-btn');
 
 const userColors = ['#e4431aff', '#00ff59ff', '#0088ffff', '#fff710ff', '#ffb700ff', '#00ff8cff']
 
@@ -45,18 +49,69 @@ document.getElementById('saveButton').addEventListener('click', () => { //saves 
     });
 });
 
+findMatchesBtn.addEventListener('click', () => {
+    console.log('pog');
+    chrome.storage.local.get(['supabaseUrl', 'supabaseKey', 'username'], (result) => {
+        const { supabaseUrl, supabaseKey, username } = result;
+
+        if (!supabaseUrl || !supabaseKey || !username) {
+            document.getElementById('find-matches-status').textContent = 'Please set your username and credentials.';
+            return;
+        }
+
+        const headers = {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json'
+        };
+
+        chrome.runtime.sendMessage({
+            action: "getAllMatches",
+            username: username,
+            headers: headers,
+            supaUrl: supabaseUrl
+        }, (response) => {
+            console.log(response);
+            if (chrome.runtime.lastError) {
+                console.error(chrome.runtime.lastError);
+                document.getElementById('matchStatus').textContent = 'Error: Background script not ready.';
+                return;
+            }
+
+            if (response && response.success) {
+                console.log(response.matches);
+                renderAllMatches(response.matches);
+            } else {
+                document.getElementById('matchStatus').textContent = 'Error: ' + (response?.error || 'Unknown');
+            }
+        });
+    });
+})
+
+currentVideoIconBtn.addEventListener('click', () => {
+    settingsPage.classList.add('hidden');
+    matchesPage.classList.add('hidden');
+    currentVideoPage.classList.remove('hidden');
+    settingsIconBtn.classList.remove('active-icon-btn');
+    matchesIconBtn.classList.remove('active-icon-btn');
+    currentVideoIconBtn.classList.add('active-icon-btn');
+});
 matchesIconBtn.addEventListener('click', () => {
     settingsPage.classList.add('hidden');
     matchesPage.classList.remove('hidden');
-    matchesIconBtn.classList.add('active-icon-btn');
+    currentVideoPage.classList.add('hidden');
     settingsIconBtn.classList.remove('active-icon-btn');
+    currentVideoIconBtn.classList.remove('active-icon-btn');
+    matchesIconBtn.classList.add('active-icon-btn');
 });
 
 settingsIconBtn.addEventListener('click', () => {
     settingsPage.classList.remove('hidden');
     matchesPage.classList.add('hidden');
+    currentVideoPage.classList.add('hidden');
     settingsIconBtn.classList.add('active-icon-btn');
     matchesIconBtn.classList.remove('active-icon-btn');
+    currentVideoIconBtn.classList.remove('active-icon-btn');
 });
 
 // --- Matching Logic ---
@@ -120,7 +175,7 @@ function renderCurrentVideoMatches(matches) {
     if (!matches || matches.length === 0) {
         status.textContent = 'No other matches found yet.';
     } else {
-        status.textContent = `${matches.length} matcher(s) found!`;
+        status.textContent = `${matches.length} matches found!`;
         let match = matches[0];
         const div = document.createElement('div');
         const thumbnail = document.createElement('img');
@@ -129,34 +184,41 @@ function renderCurrentVideoMatches(matches) {
         const videoTitleLink = document.createElement('a');
 
         thumbnail.src = `https://img.youtube.com/vi/${match.video_id}/default.jpg`;
-        thumbnail.height = 50;
+        thumbnail.style.width = '60px';
+        thumbnail.style.height = '45px';
+        thumbnail.style.objectFit = 'cover';
+        thumbnail.style.borderRadius = '2px';
 
-        videoTitleLink.textContent = match.video_title;
+        videoTitleLink.textContent = match.video_title || 'Untitled Video';
         videoTitleLink.href = `https://www.youtube.com/watch?v=${match.video_id}`;
         videoTitleLink.target = '_blank';
+        videoTitleLink.style.fontWeight = 'bold';
+        videoTitleLink.style.textDecoration = 'none';
+        videoTitleLink.style.color = '#0066cc';
 
-        videoInfoDiv.style.color = "#000";
         videoInfoDiv.style.display = 'flex';
         videoInfoDiv.style.flexDirection = 'column';
-        videoInfoDiv.style.gap = '8px'
+        videoInfoDiv.style.gap = '4px';
+        videoInfoDiv.style.flex = '1';
         videoInfoDiv.appendChild(videoTitleLink);
         videoInfoDiv.appendChild(userMatchesDiv);
 
         userMatchesDiv.style.display = 'flex'
         userMatchesDiv.style.flexWrap = 'wrap'
-        userMatchesDiv.style.rowGap = '4px'
+        userMatchesDiv.style.gap = '4px'
 
 
         // user matches
         matches.forEach(m => {
             const userSpan = document.createElement('span');
 
-            userSpan.style.padding = '4px';
-            userSpan.style.borderRadius = '4px';
+            userSpan.style.padding = '2px 6px';
+            userSpan.style.borderRadius = '10px';
             userSpan.style.backgroundColor = userColors[Math.floor(Math.random() * userColors.length)];
-            userSpan.style.marginLeft = '4px';
-
+            userSpan.style.fontSize = '11px';
+            userSpan.style.color = '#000';
             userSpan.textContent = m.username;
+
             userMatchesDiv.appendChild(userSpan);
         });
 
@@ -177,33 +239,71 @@ function renderCurrentVideoMatches(matches) {
 }
 
 function renderAllMatches(matches) {
-    const status = document.getElementById('matchStatus');
-    const list = document.getElementById('matchResults');
+    const status = document.getElementById('find-matches-status');
+    const list = document.getElementById('find-matches-results');
     list.innerHTML = '';
 
     if (!matches || matches.length === 0) {
-        status.textContent = 'No other matches found yet.';
+        status.textContent = 'No mutual matches found across your history.';
     } else {
-        status.textContent = `${matches.length} matcher(s) found!`;
+        status.textContent = `${matches.length} common video(s) found!`;
+
         matches.forEach(match => {
             const div = document.createElement('div');
-            const li = document.createElement('li');
-            const videoLink = document.createElement('a');
+            const thumbnail = document.createElement('img');
+            const videoInfoDiv = document.createElement('div');
+            const userMatchesDiv = document.createElement('div');
+            const videoTitleLink = document.createElement('a');
 
-            div.style.padding = '8px';
-            div.style.margin = '4px 0';
-            div.style.backgroundColor = '#f9f9f9';
-            div.style.borderRadius = '4px';
-            div.style.fontSize = '14px';
-            div.style.color = '#000'
+            thumbnail.src = `https://img.youtube.com/vi/${match.video_id}/default.jpg`;
+            thumbnail.style.width = '60px';
+            thumbnail.style.height = '45px';
+            thumbnail.style.objectFit = 'cover';
+            thumbnail.style.borderRadius = '2px';
 
-            li.textContent = `👤 ${match.username}`;
-            videoLink.textContent = `https://www.youtube.com/watch?v=${match.video_id}`;
-            videoLink.href = `https://www.youtube.com/watch?v=${match.video_id}`;
-            videoLink.target = '_blank';
+            videoTitleLink.textContent = match.video_title || 'Untitled Video';
+            videoTitleLink.href = `https://www.youtube.com/watch?v=${match.video_id}`;
+            videoTitleLink.target = '_blank';
+            videoTitleLink.style.fontWeight = 'bold';
+            videoTitleLink.style.textDecoration = 'none';
+            videoTitleLink.style.color = '#0066cc';
 
-            div.appendChild(li);
-            div.appendChild(videoLink);
+            videoInfoDiv.style.display = 'flex';
+            videoInfoDiv.style.flexDirection = 'column';
+            videoInfoDiv.style.gap = '4px';
+            videoInfoDiv.style.flex = '1';
+            videoInfoDiv.appendChild(videoTitleLink);
+            videoInfoDiv.appendChild(userMatchesDiv);
+
+            userMatchesDiv.style.display = 'flex';
+            userMatchesDiv.style.flexWrap = 'wrap';
+            userMatchesDiv.style.gap = '4px';
+
+            // user matches
+            match.viewers.forEach(viewerName => {
+                const userSpan = document.createElement('span');
+                userSpan.style.padding = '2px 6px';
+                userSpan.style.borderRadius = '10px';
+                userSpan.style.backgroundColor = userColors[Math.floor(Math.random() * userColors.length)];
+                userSpan.style.fontSize = '11px';
+                userSpan.style.color = '#000';
+                userSpan.textContent = viewerName;
+                userMatchesDiv.appendChild(userSpan);
+            });
+
+            div.style.padding = '10px';
+            div.style.margin = '8px 0';
+            div.style.backgroundColor = '#fff';
+            div.style.border = '1px solid #eee';
+            div.style.borderRadius = '6px';
+            div.style.display = 'flex';
+            div.style.alignItems = 'start';
+            div.style.gap = '10px';
+            div.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+
+            div.appendChild(thumbnail);
+            div.appendChild(videoInfoDiv);
+
             list.appendChild(div);
         });
     }

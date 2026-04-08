@@ -10,7 +10,10 @@
 
 <body>
     <h1><span class="red">Tube</span>Match</h1>
-    <img id="matches-icon-btn" class="icon-btn active-icon-btn" width="24" height="24"
+    <img id="current-video-icon-btn" class="icon-btn active-icon-btn" width="24" height="24"
+        src="https://img.icons8.com/external-prettycons-lineal-prettycons/49/FFFFFF/external-youtube-multimedia-prettycons-lineal-prettycons.png"
+        alt="youtube matches" />
+    <img id="matches-icon-btn" class="icon-btn" width="24" height="24"
         src="https://img.icons8.com/external-kiranshastry-lineal-kiranshastry/64/FFFFFF/external-gallery-miscellaneous-kiranshastry-lineal-kiranshastry-1.png"
         alt="youtube matches" />
     <img id="settings-icon-btn" class="icon-btn" width="24" height="24"
@@ -33,10 +36,16 @@
         <button id="saveButton" class="button">Save</button>
 
     </div>
-    <div id="matches-page">
-        <h3>Matches for Current Video</h3>
-        <div id="matchStatus">Loading matches...</div>
-        <ul id="matchResults" style="list-style: none; padding: 0;"></ul>
+    <div id="current-video-page">
+        <h2>Matches for Current Video</h3>
+            <ul id="matchResults" style="list-style: none; padding: 0;"></ul>
+            <div id="matchStatus">Loading matches...</div>
+    </div>
+    <div id="matches-page" class="hidden">
+        <h2>All Matches</h3>
+            <button id="find-matches-btn" class="button">Find Matches</button>
+            <div id="find-matches-status"></div>
+            <ul id="find-matches-results" style="list-style: none; padding: 0;"></ul>
     </div>
 
     <script src="popup.js"></script>

@@ -9,7 +9,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             .catch(error => sendResponse({ success: false, error: error.message }));
         return true; // Keep message channel open for async sendResponse
     } else if (request.action === "getAllMatches") {
-        fetchAllMatches(request.username, request.videoId, request.headers, request.supaUrl)
+        fetchAllMatches(request.username, request.headers, request.supaUrl)
             .then(matches => sendResponse({ success: true, matches: matches }))
             .catch(error => sendResponse({ success: false, error: error.message }));
         return true;
@@ -131,26 +131,58 @@ async function findMatches(videoId, myUsername, daysBack, headers, supaUrl) {
     }
 }
 
-async function fetchAllMatches(myUsername,videoId, headers, supaUrl) {
+async function fetchAllMatches(myUsername, headers, supaUrl) {
     try {
-        const url = `${supaUrl}/rest/v1/${tableName}?username=neq.${myUsername}&video_id=eq.${videoId}`;
+        // all videos seen by the current user
+        const myHistoryUrl = `${supaUrl}/rest/v1/${tableName}?username=eq.${myUsername}&select=video_id,video_title`;
+        const myResponse = await fetch(myHistoryUrl, { method: 'GET', headers });
 
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: headers
+        if (!myResponse.ok) throw new Error(`HTTP error! status: ${myResponse.status}`);
+
+        const myHistory = await myResponse.json();
+        if (myHistory.length === 0) return [];
+
+        const myVideoMap = {};
+        myHistory.forEach(item => {
+            myVideoMap[item.video_id] = item.video_title;
         });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
-        }
+        const myVideoIds = Object.keys(myVideoMap);
 
-        const data = await response.json();
-        console.log(`Found ${data.length} match(es) in the last ${daysBack} days.`);
-        return data;
+        // all entries for these videos from other users (not the best solution but the scale in use is so small it shouldnt matter :D)
 
+        const allOthersUrl = `${supaUrl}/rest/v1/${tableName}?username=neq.${myUsername}`;
+        const othersResponse = await fetch(allOthersUrl, { method: 'GET', headers });
+
+        if (!othersResponse.ok) throw new Error(`HTTP error! status: ${othersResponse.status}`);
+
+        const othersHistory = await othersResponse.json();
+
+
+        // group matches
+        const matchesGrouped = {};
+
+        othersHistory.forEach(record => {
+            if (myVideoMap[record.video_id]) { // current user seen it
+                if (!matchesGrouped[record.video_id]) { // first match for video
+                    matchesGrouped[record.video_id] = {
+                        video_id: record.video_id,
+                        video_title: record.video_title,
+                        viewers: []
+                    };
+                }
+                //add usernames that matched
+                if (!matchesGrouped[record.video_id].viewers.includes(record.username)) {
+                    matchesGrouped[record.video_id].viewers.push(record.username);
+                }
+            }
+        });
+
+        // Convert the object to array of matches
+        const matches = Object.values(matchesGrouped);
+        return matches;
     } catch (error) {
-        console.error('Failed to find matches:', error);
+        console.error('Failed to fetch all matches:', error);
         return [];
     }
 }
