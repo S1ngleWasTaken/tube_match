@@ -1,3 +1,8 @@
+let settingsPage = document.getElementById('settings-page');
+let matchesPage = document.getElementById('matches-page');
+let settingsIconBtn = document.getElementById('settings-icon-btn');
+let matchesIconBtn = document.getElementById('matches-icon-btn');
+
 chrome.storage.local.get(['supabaseUrl', 'supabaseKey', 'username'], (result) => { // sets defaul input values
     const supaUrl = result.supabaseUrl;
     const supaKey = result.supabaseKey;
@@ -36,6 +41,20 @@ document.getElementById('saveButton').addEventListener('click', () => { //saves 
             location.reload();
         }, 2000);
     });
+});
+
+matchesIconBtn.addEventListener('click', () => {
+    settingsPage.classList.add('hidden');
+    matchesPage.classList.remove('hidden');
+    matchesIconBtn.classList.add('active-icon-btn');
+    settingsIconBtn.classList.remove('active-icon-btn');
+});
+
+settingsIconBtn.addEventListener('click', () => {
+    settingsPage.classList.remove('hidden');
+    matchesPage.classList.add('hidden');
+    settingsIconBtn.classList.add('active-icon-btn');
+    matchesIconBtn.classList.remove('active-icon-btn');
 });
 
 // --- Matching Logic ---

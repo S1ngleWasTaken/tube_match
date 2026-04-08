@@ -4,29 +4,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
     <title>TubeMatch</title>
-    <style>
-        body {
-            background-color: #252525;
-            color: #fff;
-        }
-    </style>
 </head>
 
 <body>
-    <h1>TubeMatch</h1>
-    <label for="usernameInput">Username:</label>
-    <input type="text" id="usernameInput" placeholder="Enter your username">
-    <label for="urlInput">Supabase URL:</label>
-    <input type="password" id="urlInput" placeholder="Enter Supabase URL">
-    <label for="keyInput">Supabase Key:</label>
-    <input type="password" id="keyInput" placeholder="Enter Supabase Key">
-    <button id="saveButton">Save</button>
-
+    <h1><span class="red">Tube</span>Match</h1>
+    <img id="matches-icon-btn" class="icon-btn active-icon-btn" width="24" height="24"
+        src="https://img.icons8.com/external-kiranshastry-lineal-kiranshastry/64/FFFFFF/external-gallery-miscellaneous-kiranshastry-lineal-kiranshastry-1.png"
+        alt="youtube matches" />
+    <img id="settings-icon-btn" class="icon-btn" width="24" height="24"
+        src="https://img.icons8.com/forma-bold/24/FFFFFF/settings.png" alt="settings" />
     <hr>
-    <h3>Matches for Current Video</h3>
-    <div id="matchStatus">Loading matches...</div>
-    <ul id="matchResults" style="list-style: none; padding: 0;"></ul>
+    <div id="settings-page" class="hidden">
+        <h2>Settings</h2>
+        <div class="input-row">
+            <label for="usernameInput">Username:</label>
+            <input type="text" id="usernameInput" placeholder="Enter your username">
+        </div>
+        <div class="input-row">
+            <label for="urlInput">Supabase URL:</label>
+            <input type="password" id="urlInput" placeholder="Enter Supabase URL">
+        </div>
+        <div class="input-row">
+            <label for="keyInput">Supabase Key:</label>
+            <input type="password" id="keyInput" placeholder="Enter Supabase Key">
+        </div>
+        <button id="saveButton" class="button">Save</button>
+
+    </div>
+    <div id="matches-page">
+        <h3>Matches for Current Video</h3>
+        <div id="matchStatus">Loading matches...</div>
+        <ul id="matchResults" style="list-style: none; padding: 0;"></ul>
+    </div>
 
     <script src="popup.js"></script>
 </body>
