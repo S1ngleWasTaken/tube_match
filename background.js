@@ -3,17 +3,32 @@ let currentVideoId = null;
 
 // Listen for messages from the popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "findMatches") {
-        findMatches(request.videoId, request.username, request.daysBack, request.headers, request.supaUrl)
-            .then(matches => sendResponse({ success: true, matches: matches }))
-            .catch(error => sendResponse({ success: false, error: error.message }));
-        return true; // Keep message channel open for async sendResponse
-    } else if (request.action === "getAllMatches") {
-        fetchAllMatches(request.username, request.headers, request.supaUrl)
-            .then(matches => sendResponse({ success: true, matches: matches }))
-            .catch(error => sendResponse({ success: false, error: error.message }));
-        return true;
-    }
+    chrome.storage.local.get(['supabaseUrl', 'supabaseKey', 'username'], (result) => {
+        const { supabaseUrl, supabaseKey, username } = result;
+
+        if (!supabaseUrl || !supabaseKey || !username) {
+            sendResponse({ success: false, error: "Settings not configured" });
+            return;
+        }
+
+        const headers = {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+        };
+
+        if (request.action === "findMatches") {
+            findMatches(request.videoId, username, request.daysBack || 7, headers, supabaseUrl)
+                .then(matches => sendResponse({ success: true, matches: matches }))
+                .catch(error => sendResponse({ success: false, error: error.message }));
+        } else if (request.action === "getAllMatches") {
+            fetchAllMatches(username, headers, supabaseUrl)
+                .then(matches => sendResponse({ success: true, matches: matches }))
+                .catch(error => sendResponse({ success: false, error: error.message }));
+        }
+    });
+    return true; // Keep message channel open for async sendResponse
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => { //listens for tab updates and checks if the url is a youtube video
@@ -25,7 +40,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => { //listens for ta
             const username = result.username;
 
             if (!supaUrl || !supaKey || !username) {
-                console.log("Supabase credentials or username not found in storage.");
                 return;
             }
 
@@ -33,7 +47,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => { //listens for ta
             if (!currentVideoId) return;
             const videoTitle = tab.title;
 
-            console.log("Current Video ID:", currentVideoId);
 
             const headers = {
                 'apikey': supaKey,
@@ -58,18 +71,20 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => { //listens for ta
 });
 
 function getYoutubeVideoId(urlString) {
+    // extracts video id from youtube url
     try {
         const url = new URL(urlString);
         if (url.hostname.includes('youtube.com') && url.pathname === '/watch') {
             return url.searchParams.get('v');
         }
     } catch {
-        console.log("Invalid URL");
+        // Silently fail on invalid URLs
     }
     return null;
 }
 
 async function insertToSupabase(videoData, headers, supaUrl) {
+    // inserts video data into supabase
     try {
         const response = await fetch(`${supaUrl}/rest/v1/${tableName}`, {
             method: 'POST',
@@ -87,12 +102,10 @@ async function insertToSupabase(videoData, headers, supaUrl) {
         }
 
         const data = await response.json();
-        console.log('Insert successful:', data);
         return { success: true, data: data };
 
     } catch (error) {
         if (error.message.includes("409")) {
-            console.log("Video id is already saved");
             return { success: true, duplicate: true };
         } else {
             console.error('Background insert failed:', error);
@@ -102,6 +115,7 @@ async function insertToSupabase(videoData, headers, supaUrl) {
 }
 
 async function findMatches(videoId, myUsername, daysBack, headers, supaUrl) {
+    // finds matches for a video
     try {
         // Calculate date cutoff
         const dateCutoff = new Date();
@@ -122,7 +136,6 @@ async function findMatches(videoId, myUsername, daysBack, headers, supaUrl) {
         }
 
         const data = await response.json();
-        console.log(`Found ${data.length} match(es) in the last ${daysBack} days.`);
         return data;
 
     } catch (error) {

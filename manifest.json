@@ -1,6 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "TubeMatch",
+  "name": "MatchTube",
+  "author": "Jan Nosek",
+  "icons": {
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "version": "1.0.0",
   "description": "Find matches for the video you are watching",
   "action": {
@@ -10,11 +15,5 @@
   "host_permissions": ["https://*.supabase.co/*"],
   "background": {
     "service_worker": "background.js"
-  },
-  "content_scripts": [
-    {
-      "matches": ["https://*.youtube.com/*"],
-      "js": ["content.js"]
-    }
-  ]
+  }
 }
